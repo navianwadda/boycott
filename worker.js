@@ -5,24 +5,21 @@
 
 const ALLOWED_COUNTRIES = ["BD", "PK", "GB", "US", "AU", "CA"];
 
-// Free public test HLS stream (Mux test stream - no license issues)
-const TEST_STREAM_URL = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+// Apple's official HLS test stream — globally accessible, no geo-restriction
+const TEST_STREAM_URL = "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8";
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // ── Route: /stream ───────────────────────────────────────
     if (url.pathname === "/stream") {
       return await handleStream(request);
     }
 
-    // ── Route: /debug  (shows all headers received) ──────────
     if (url.pathname === "/debug") {
       return handleDebug(request);
     }
 
-    // ── Default: usage info ──────────────────────────────────
     return new Response(
       JSON.stringify({
         usage: {
@@ -41,13 +38,12 @@ export default {
 // ─────────────────────────────────────────────────────────────
 async function handleStream(request) {
   const xForwardedFor = request.headers.get("X-Forwarded-For");
-  const cfCountry = request.headers.get("CF-IPCountry"); // Cloudflare auto header
+  const cfCountry = request.headers.get("CF-IPCountry");
 
   let resolvedCountry = cfCountry;
   let resolvedIP = null;
   let geoSource = "CF-IPCountry";
 
-  // If X-Forwarded-For is present, geolocate that IP
   if (xForwardedFor) {
     resolvedIP = xForwardedFor.split(",")[0].trim();
     geoSource = "X-Forwarded-For";
@@ -57,12 +53,10 @@ async function handleStream(request) {
         `http://ip-api.com/json/${resolvedIP}?fields=countryCode,country,regionName,isp`
       );
       const geo = await geoRes.json();
-
       if (geo.countryCode) {
         resolvedCountry = geo.countryCode;
       }
     } catch (e) {
-      // Fallback to CF country if ip-api fails
       resolvedCountry = cfCountry;
       geoSource = "CF-IPCountry (fallback)";
     }
@@ -90,14 +84,18 @@ async function handleStream(request) {
     );
   }
 
-  // ── ALLOWED — redirect to test stream ────────────────────
+  // ── ALLOWED — proxy stream directly (no redirect) ────────
   const upstream = await fetch(TEST_STREAM_URL);
-return new Response(upstream.body, {
-  headers: {
-    "Content-Type": "application/vnd.apple.mpegurl",
-    "Access-Control-Allow-Origin": "*",
-    "X-Geo-Country": resolvedCountry,
-  }
+  return new Response(upstream.body, {
+    headers: {
+      "Content-Type": "application/vnd.apple.mpegurl",
+      "Access-Control-Allow-Origin": "*",
+      "X-Geo-Country": resolvedCountry,
+      "X-Geo-Source": geoSource,
+      "X-Resolved-IP": resolvedIP || "direct",
+    },
+  });
+}
 
 // ─────────────────────────────────────────────────────────────
 // Debug handler — dumps all received headers as JSON
