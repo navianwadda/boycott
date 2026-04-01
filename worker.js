@@ -91,17 +91,13 @@ async function handleStream(request) {
   }
 
   // ── ALLOWED — redirect to test stream ────────────────────
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: TEST_STREAM_URL,
-      "X-Geo-Country": resolvedCountry,
-      "X-Geo-Source": geoSource,
-      "X-Resolved-IP": resolvedIP || "direct",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
-}
+  const upstream = await fetch(TEST_STREAM_URL);
+return new Response(upstream.body, {
+  headers: {
+    "Content-Type": "application/vnd.apple.mpegurl",
+    "Access-Control-Allow-Origin": "*",
+    "X-Geo-Country": resolvedCountry,
+  }
 
 // ─────────────────────────────────────────────────────────────
 // Debug handler — dumps all received headers as JSON
