@@ -3,7 +3,7 @@
 // Deploy this on Cloudflare Workers
 // ============================================================
 
-const ALLOWED_COUNTRIES = ["IN", "PK", "GB", "US", "AU", "CA"];
+const ALLOWED_COUNTRIES = ["BD", "PK", "GB", "US", "AU", "CA"];
 
 // Free public test HLS stream (Mux test stream - no license issues)
 const TEST_STREAM_URL = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
