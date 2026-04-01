@@ -84,9 +84,23 @@ async function handleStream(request) {
     );
   }
 
-  // ── ALLOWED — proxy stream directly (no redirect) ────────
+  // ── ALLOWED — proxy + rewrite relative URLs ───────────────
   const upstream = await fetch(TEST_STREAM_URL);
-  return new Response(upstream.body, {
+  const text = await upstream.text();
+
+  // Base URL: everything up to the last slash
+  const baseUrl = TEST_STREAM_URL.substring(0, TEST_STREAM_URL.lastIndexOf("/") + 1);
+
+  // Rewrite relative segment/playlist URLs to absolute
+  const rewritten = text.replace(
+    /^(?!#)([^\s]+)$/gm,
+    (match) => {
+      if (match.startsWith("http://") || match.startsWith("https://")) return match;
+      return baseUrl + match;
+    }
+  );
+
+  return new Response(rewritten, {
     headers: {
       "Content-Type": "application/vnd.apple.mpegurl",
       "Access-Control-Allow-Origin": "*",
